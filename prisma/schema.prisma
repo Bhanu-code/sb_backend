@@ -1,0 +1,357 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  customer
+  advisor
+  master_agent
+}
+
+enum CommissionStatus {
+  pending
+  paid
+  failed
+}
+
+enum CommissionType {
+  joining
+  subscription
+}
+
+enum InterestStatus {
+  pending
+  accepted
+  declined
+}
+
+enum OtpChannel {
+  email
+  sms
+}
+
+enum NotificationType {
+  like
+  comment
+  connection_request
+  connection_accepted
+  message
+  system
+}
+
+enum ReportReason {
+  fake_profile
+  inappropriate_content
+  harassment
+  spam
+  other
+}
+
+enum MediaType {
+  image
+  video
+}
+
+model User {
+  id              String    @id @default(uuid())
+  email           String?   @unique
+  phone           String?   @unique
+  passwordHash    String?
+  fullName        String?
+  dateOfBirth     DateTime?
+  gender          String?
+  role            Role      @default(customer)
+  referralCode    String    @unique
+  referredById    String?
+  referralCount   Int       @default(0)
+  isActive        Boolean   @default(true)
+  profileComplete Boolean   @default(false)
+  emailVerified   Boolean   @default(false)
+  phoneVerified   Boolean   @default(false)
+  idVerified      Boolean   @default(false)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  
+  notificationsEnabled    Boolean @default(true)
+  locationSharingEnabled  Boolean @default(false)
+
+  referredBy    User?   @relation("ReferralTree", fields: [referredById], references: [id])
+  referrals     User[]  @relation("ReferralTree")
+
+  profile               Profile?
+  subscription          Subscription?
+  otpTokens             OtpToken[]
+  sentInterests         Interest[]   @relation("SentInterests")
+  receivedInterests     Interest[]   @relation("ReceivedInterests")
+  commissionsEarned     Commission[] @relation("CommissionBeneficiary")
+  commissionsTriggered  Commission[] @relation("CommissionSource")
+  sessions              Session[]
+
+  posts    Post[]
+  reels    Reel[]
+  comments Comment[]
+  likes    Like[]
+
+  sentMessages     Message[] @relation("SentMessages")
+  receivedMessages Message[] @relation("ReceivedMessages")
+
+  notifications Notification[]
+
+  blockedUsers   Block[] @relation("Blocker")
+  blockedByUsers Block[] @relation("Blocked")
+
+  reportsMade     Report[] @relation("Reporter")
+  reportsReceived Report[] @relation("Reported")
+
+  @@map("users")
+}
+
+model Profile {
+  id               String   @id @default(uuid())
+  userId           String   @unique
+  bio              String?
+  avatarUrl        String?
+  coverUrl         String?
+  height           Int?     // in cm
+  religion         String?
+  caste            String?
+  motherTongue     String?
+  education        String?
+  occupation       String?
+  annualIncome     String?
+  city             String?
+  state            String?
+  latitude         Float?
+  longitude        Float?
+  photos           String[] // S3 URLs
+  partnerAgeMin    Int?
+  partnerAgeMax    Int?
+  partnerReligion  String?
+  partnerCaste     String?
+  matrimonyVisible Boolean  @default(true)
+  verificationDocUrl String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  user             User     @relation(fields: [userId], references: [id])
+
+  @@index([religion, caste])
+  @@index([city, state])
+  @@map("profiles")
+}
+
+model OtpToken {
+  id        String     @id @default(uuid())
+  userId    String
+  target    String     // email address or phone number
+  channel   OtpChannel
+  otp       String
+  expiresAt DateTime
+  used      Boolean    @default(false)
+  createdAt DateTime   @default(now())
+
+  user      User       @relation(fields: [userId], references: [id])
+
+  @@index([userId, channel])
+  @@map("otp_tokens")
+}
+
+model Session {
+  id        String   @id @default(uuid())
+  userId    String
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id])
+
+  @@map("sessions")
+}
+
+model Interest {
+  id         String         @id @default(uuid())
+  senderId   String
+  receiverId String
+  status     InterestStatus @default(pending)
+  createdAt  DateTime       @default(now())
+  updatedAt  DateTime       @updatedAt
+
+  sender     User           @relation("SentInterests", fields: [senderId], references: [id])
+  receiver   User           @relation("ReceivedInterests", fields: [receiverId], references: [id])
+
+  @@unique([senderId, receiverId])
+  @@index([receiverId, status])
+  @@map("interests")
+}
+
+model Commission {
+  id            String           @id @default(uuid())
+  beneficiaryId String
+  sourceUserId  String
+  level         Int
+  amount        Decimal          @db.Decimal(10, 2)
+  type          CommissionType
+  status        CommissionStatus @default(pending)
+  createdAt     DateTime         @default(now())
+
+  beneficiary   User             @relation("CommissionBeneficiary", fields: [beneficiaryId], references: [id])
+  sourceUser    User             @relation("CommissionSource", fields: [sourceUserId], references: [id])
+
+  @@map("commissions")
+}
+
+model Subscription {
+  id              String   @id @default(uuid())
+  userId          String   @unique
+  plan            String   // basic | premium | gold
+  status          String   // active | expired | cancelled
+  razorpayOrderId String?
+  amount          Decimal  @db.Decimal(10, 2)
+  startDate       DateTime
+  endDate         DateTime
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  user            User     @relation(fields: [userId], references: [id])
+
+  @@map("subscriptions")
+}
+
+model Post {
+  id        String    @id @default(uuid())
+  authorId  String
+  content   String?
+  imageUrl  String?
+  mediaType MediaType?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  author    User      @relation(fields: [authorId], references: [id])
+  comments  Comment[]
+  likes     Like[]
+
+  @@index([authorId])
+  @@map("posts")
+}
+
+model Reel {
+  id           String    @id @default(uuid())
+  authorId     String
+  videoUrl     String
+  thumbnailUrl String?
+  caption      String?
+  views        Int       @default(0)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  author       User      @relation(fields: [authorId], references: [id])
+  comments     Comment[]
+  likes        Like[]
+
+  @@index([authorId])
+  @@map("reels")
+}
+
+model Comment {
+  id        String   @id @default(uuid())
+  authorId  String
+  content   String
+  createdAt DateTime @default(now())
+
+  author    User     @relation(fields: [authorId], references: [id])
+
+  postId    String?
+  post      Post?    @relation(fields: [postId], references: [id])
+
+  reelId    String?
+  reel      Reel?    @relation(fields: [reelId], references: [id])
+
+  @@index([postId])
+  @@index([reelId])
+  @@map("comments")
+}
+
+model Like {
+  id        String   @id @default(uuid())
+  userId    String
+  createdAt DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id])
+
+  postId    String?
+  post      Post?    @relation(fields: [postId], references: [id])
+
+  reelId    String?
+  reel      Reel?    @relation(fields: [reelId], references: [id])
+
+  @@unique([userId, postId])
+  @@unique([userId, reelId])
+  @@map("likes")
+}
+
+model Message {
+  id         String   @id @default(uuid())
+  senderId   String
+  receiverId String
+  content    String
+  read       Boolean  @default(false)
+  createdAt  DateTime @default(now())
+
+  sender     User     @relation("SentMessages", fields: [senderId], references: [id])
+  receiver   User     @relation("ReceivedMessages", fields: [receiverId], references: [id])
+
+  @@index([senderId, receiverId])
+  @@index([receiverId, read])
+  @@map("messages")
+}
+
+model Notification {
+  id        String           @id @default(uuid())
+  userId    String
+  type      NotificationType
+  title     String
+  body      String?
+  read      Boolean          @default(false)
+  relatedId String?          // e.g. postId, interestId, messageId — polymorphic reference
+  createdAt DateTime         @default(now())
+
+  user      User             @relation(fields: [userId], references: [id])
+
+  @@index([userId, read])
+  @@map("notifications")
+}
+
+model Block {
+  id        String   @id @default(uuid())
+  blockerId String
+  blockedId String
+  createdAt DateTime @default(now())
+
+  blocker   User     @relation("Blocker", fields: [blockerId], references: [id])
+  blocked   User     @relation("Blocked", fields: [blockedId], references: [id])
+
+  @@unique([blockerId, blockedId])
+  @@map("blocks")
+}
+
+model Report {
+  id          String       @id @default(uuid())
+  reporterId  String
+  reportedId  String
+  reason      ReportReason
+  description String?
+  resolved    Boolean      @default(false)
+  createdAt   DateTime     @default(now())
+
+  reporter    User         @relation("Reporter", fields: [reporterId], references: [id])
+  reported    User         @relation("Reported", fields: [reportedId], references: [id])
+
+  @@map("reports")
+}
