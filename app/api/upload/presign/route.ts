@@ -2,7 +2,15 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getPresignedUploadUrl } from '@/lib/s3'
 
-const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp']
+const ALLOWED_TYPES = [
+  'image/jpeg',
+  'image/png',
+  'image/webp',
+  'video/mp4',
+  'video/quicktime',
+  'video/x-matroska', // .mkv, in case picked from certain devices
+  'video/webm',
+]
 
 export async function POST(req: NextRequest) {
   try {
@@ -20,7 +28,9 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    const safeFolder = folder === 'profile-photos' ? 'profile-photos' : 'misc'
+    const safeFolder = ['profile-photos', 'post-photos', 'post-videos', 'reels'].includes(folder)
+      ? folder
+      : 'misc'
 
     const { uploadUrl, publicUrl } = await getPresignedUploadUrl(
       `${safeFolder}/${userId}`,
