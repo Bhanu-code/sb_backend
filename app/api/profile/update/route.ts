@@ -32,12 +32,6 @@ export async function PATCH(req: NextRequest) {
       coverUrl,
     } = body
 
-    const existingProfile = await prisma.profile.findUnique({ where: { userId } })
-    const photos = [...(existingProfile?.photos ?? [])]
-
-    if (avatarUrl) photos[0] = avatarUrl
-    if (coverUrl) photos[1] = coverUrl
-
     const [updatedUser] = await prisma.$transaction([
       prisma.user.update({
         where: { id: userId },
@@ -65,7 +59,8 @@ export async function PATCH(req: NextRequest) {
           partnerAgeMax,
           partnerReligion,
           partnerCaste,
-          photos,
+          avatarUrl,
+          coverUrl,
         },
         update: {
           ...(bio !== undefined && { bio }),
@@ -82,7 +77,8 @@ export async function PATCH(req: NextRequest) {
           ...(partnerAgeMax !== undefined && { partnerAgeMax }),
           ...(partnerReligion !== undefined && { partnerReligion }),
           ...(partnerCaste !== undefined && { partnerCaste }),
-          ...((avatarUrl || coverUrl) && { photos }),
+          ...(avatarUrl !== undefined && { avatarUrl }),
+          ...(coverUrl !== undefined && { coverUrl }),
         },
       }),
     ])
