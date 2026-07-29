@@ -12,8 +12,10 @@ export async function GET(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
+    const { postId } = await params;
+
     const comments = await prisma.comment.findMany({
-      where: { postId: params.postId },
+      where: { postId: postId },
       orderBy: { createdAt: 'asc' },
       include: {
         author: {
@@ -50,13 +52,15 @@ export async function POST(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
+    const { postId } = await params;
+
     const { content } = await req.json()
     if (!content?.trim()) {
       return NextResponse.json({ error: 'Comment cannot be empty' }, { status: 400 })
     }
 
     const comment = await prisma.comment.create({
-      data: { authorId: userId, postId: params.postId, content: content.trim() },
+      data: { authorId: userId, postId: postId, content: content.trim() },
       include: {
         author: {
           select: { id: true, fullName: true, profile: { select: { avatarUrl: true } } },

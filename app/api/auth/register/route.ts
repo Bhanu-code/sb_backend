@@ -6,7 +6,7 @@ import { sendOtpEmail } from '@/lib/mailer'
 
 export async function POST(req: NextRequest) {
   try {
-    const { fullName, email } = await req.json()
+    const { fullName, email, referralCode } = await req.json()
 
     if (!fullName || !email) {
       return NextResponse.json({ error: 'Name and email are required' }, { status: 400 })
@@ -30,11 +30,29 @@ export async function POST(req: NextRequest) {
     const otp = generateOtp()
     const user = await saveOtp(email, otp)
 
+    const updateData: { fullName?: string; referredById?: string } = {}
+
     // saveOtp doesn't know about fullName — capture/update it here
     if (user.fullName !== fullName) {
+      updateData.fullName = fullName
+    }
+
+    // Only look up + set referredById if not already set — avoids overwriting
+    // on a resumed/resent registration, and ignores a code typed on a later retry.
+    if (referralCode && !user.referredById) {
+      const referrer = await prisma.user.findUnique({ where: { referralCode } })
+
+      if (referrer && (referrer.role === 'advisor' || referrer.role === 'master_agent')) {
+        updateData.referredById = referrer.id
+      }
+      // Invalid/unknown code is silently ignored rather than blocking registration —
+      // a typo in a referral code shouldn't stop someone from signing up.
+    }
+
+    if (Object.keys(updateData).length > 0) {
       await prisma.user.update({
         where: { id: user.id },
-        data: { fullName },
+        data: updateData,
       })
     }
 

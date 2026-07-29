@@ -36,8 +36,8 @@ export async function GET(req: NextRequest) {
       profile: user.profile
         ? {
             bio: user.profile.bio,
-            avatarUrl: user.profile.photos?.[0] ?? null,
-            coverUrl: user.profile.photos?.[1] ?? null,
+            avatarUrl: user.profile.avatarUrl,
+            coverUrl: user.profile.coverUrl,
             height: user.profile.height,
             religion: user.profile.religion,
             caste: user.profile.caste,
