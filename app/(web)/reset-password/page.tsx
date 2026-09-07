@@ -105,7 +105,7 @@ const styles: Record<string, React.CSSProperties> = {
     justifyContent: 'center',
     backgroundColor: '#fff0f3',
     fontFamily: 'system-ui, sans-serif',
-    backgroundImage: "url('/redbg.jpg')",
+     backgroundImage: 'url("/redbg.jpg")', backgroundSize: 'cover', backgroundPosition: 'center'   
   },
   card: {
     backgroundColor: '#ffffff',
