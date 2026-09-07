@@ -15,6 +15,9 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const { searchParams } = new URL(req.url);
+    const category = searchParams.get("category") ?? "recommended";
+
     const me = await prisma.user.findUnique({
       where: { id: userId },
       include: { profile: true },
@@ -24,7 +27,6 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
-    // Users already interacted with (either direction, any status) — don't resurface
     const existingInterests = await prisma.interest.findMany({
       where: { OR: [{ senderId: userId }, { receiverId: userId }] },
       select: { senderId: true, receiverId: true },
@@ -34,7 +36,6 @@ export async function GET(req: NextRequest) {
     );
     interactedIds.add(userId);
 
-    // Users I've blocked or who've blocked me
     const blocks = await prisma.block.findMany({
       where: { OR: [{ blockerId: userId }, { blockedId: userId }] },
       select: { blockerId: true, blockedId: true },
@@ -43,17 +44,8 @@ export async function GET(req: NextRequest) {
       blocks.flatMap((b) => [b.blockerId, b.blockedId]),
     );
 
-    const passes = await prisma.pass.findMany({
-      where: { userId },
-      select: { targetId: true },
-    });
-    const passedIds = passes.map((p) => p.targetId);
+    const excludeIds = [...new Set([...interactedIds, ...blockedIds])];
 
-    const excludeIds = [
-      ...new Set([...interactedIds, ...blockedIds, ...passedIds]),
-    ];
-
-    // Convert my partner age preference into a dateOfBirth range for the query
     const now = new Date();
     let dobGte: Date | undefined;
     let dobLte: Date | undefined;
@@ -67,7 +59,6 @@ export async function GET(req: NextRequest) {
       dobLte.setFullYear(now.getFullYear() - me.profile.partnerAgeMin);
     }
 
-    // Default: show the opposite gender (standard matrimony assumption — see note)
     const targetGender =
       me.gender === "MALE"
         ? "FEMALE"
@@ -75,21 +66,81 @@ export async function GET(req: NextRequest) {
           ? "MALE"
           : undefined;
 
+    // Base filters shared by every category — never bypass these
+    const baseWhere = {
+      id: { notIn: excludeIds },
+      profileComplete: true,
+      isActive: true,
+      ...(targetGender && { gender: targetGender }),
+      ...(dobGte && dobLte && { dateOfBirth: { gte: dobGte, lte: dobLte } }),
+    };
+
+    // Category-specific narrowing, layered on top of the base filters
+    let categoryProfileWhere: Record<string, any> = { matrimonyVisible: true };
+    let orderBy: Record<string, any> = { createdAt: "desc" };
+
+    switch (category) {
+      case "nearby":
+        if (me.profile?.city) {
+          categoryProfileWhere = {
+            ...categoryProfileWhere,
+            city: me.profile.city,
+          };
+        } else if (me.profile?.state) {
+          categoryProfileWhere = {
+            ...categoryProfileWhere,
+            state: me.profile.state,
+          };
+        }
+        break;
+
+      case "education":
+        if (me.profile?.educationLevel) {
+          categoryProfileWhere = {
+            ...categoryProfileWhere,
+            educationLevel: me.profile.educationLevel,
+          };
+        }
+        break;
+
+      case "professional":
+        if (me.profile?.occupationCategory) {
+          categoryProfileWhere = {
+            ...categoryProfileWhere,
+            occupationCategory: me.profile.occupationCategory,
+          };
+        }
+        break;
+
+      case "community":
+        if (me.profile?.religion) {
+          categoryProfileWhere = {
+            ...categoryProfileWhere,
+            religion: me.profile.religion,
+          };
+        }
+        // caste stays free text — dropped from equality filter since it's
+        // too fragmented to reliably match; religion alone drives this category now
+        break;
+
+      case "recommended":
+      default:
+        if (me.profile?.partnerReligion) {
+          categoryProfileWhere = {
+            ...categoryProfileWhere,
+            religion: me.profile.partnerReligion,
+          };
+        }
+        break;
+    }
+
     const candidates = await prisma.user.findMany({
       where: {
-        id: { notIn: excludeIds },
-        profileComplete: true,
-        isActive: true,
-        ...(targetGender && { gender: targetGender }),
-        ...(dobGte && dobLte && { dateOfBirth: { gte: dobGte, lte: dobLte } }),
-        profile: {
-          matrimonyVisible: true,
-          ...(me.profile?.partnerReligion && {
-            religion: me.profile.partnerReligion,
-          }),
-        },
+        ...baseWhere,
+        profile: categoryProfileWhere,
       },
       include: { profile: true },
+      orderBy,
       take: 20,
     });
 
@@ -103,13 +154,14 @@ export async function GET(req: NextRequest) {
         location:
           [c.profile?.city, c.profile?.state].filter(Boolean).join(", ") ||
           null,
-        religion: c.profile?.religion ?? null,
+        religion: c.profile?.religion ?? null, // now returns e.g. "hindu", not "Hindu"
         caste: c.profile?.caste ?? null,
         height: c.profile?.height ?? null,
-        image: c.profile?.photos?.[0] ?? null,
+        education: c.profile?.education ?? null,
+        image: c.profile?.avatarUrl ?? null,
       }));
 
-    return NextResponse.json({ profiles: results });
+    return NextResponse.json({ profiles: results, category });
   } catch (err) {
     console.error("Discover matches error:", err);
     return NextResponse.json(

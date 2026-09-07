@@ -86,24 +86,27 @@ export async function POST(req: NextRequest) {
 
     const body = await req.json()
     const {
-      gender,
-      dateOfBirth,
-      heightCm,
-      religion,
-      caste,
-      motherTongue,
-      education,
-      occupation,
-      annualIncome,
-      city,
-      state,
-      bio,
-      photos,
-      partnerAgeMin,
-      partnerAgeMax,
-      partnerReligion,
-      partnerCaste,
-    } = body
+  gender,
+  dateOfBirth,
+  heightCm,
+  religion,
+  caste,
+  motherTongue,
+  education,
+  educationLevel,
+  occupation,
+  occupationCategory,
+  annualIncome,
+  city,
+  state,
+  bio,
+  photos,
+  partnerAgeMin,
+  partnerAgeMax,
+  partnerReligion,
+  partnerCaste,
+} = body;
+
 
     if (!photos || photos.length === 0) {
       return NextResponse.json({ error: 'At least 1 photo is required' }, { status: 400 })
