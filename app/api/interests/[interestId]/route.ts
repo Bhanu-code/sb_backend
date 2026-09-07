@@ -17,8 +17,10 @@ export async function PATCH(
       return NextResponse.json({ error: 'Invalid action' }, { status: 400 })
     }
 
+    const { interestId } = await params;
+
     const interest = await prisma.interest.findUnique({
-      where: { id: params.interestId },
+      where: { id: interestId },
     })
 
     if (!interest) {
@@ -37,7 +39,7 @@ export async function PATCH(
     }
 
     const updated = await prisma.interest.update({
-      where: { id: params.interestId },
+      where: { id: interestId },
       data: { status: action === 'accept' ? 'accepted' : 'declined' },
     })
 

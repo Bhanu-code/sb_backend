@@ -66,6 +66,42 @@ enum MasterAgentRequestStatus {
   rejected
 }
 
+enum Religion {
+  hindu
+  muslim
+  christian
+  sikh
+  buddhist
+  jain
+  parsi
+  jewish
+  other
+}
+
+enum EducationLevel {
+  high_school
+  diploma
+  bachelors
+  masters
+  phd
+  professional
+  other
+}
+
+enum OccupationCategory {
+  engineering_technology
+  healthcare
+  finance
+  government
+  education
+  business_management
+  arts_media
+  legal
+  self_employed
+  student
+  other
+}
+
 model User {
   id              String    @id @default(uuid())
   email           String?   @unique
@@ -89,8 +125,13 @@ model User {
   notificationsEnabled   Boolean @default(true)
   locationSharingEnabled Boolean @default(false)
 
-  referredBy User?  @relation("ReferralTree", fields: [referredById], references: [id])
+  // Self-relation: NOT cascaded on delete — removing a referring advisor
+  // shouldn't wipe out everyone they referred. referredById is set to
+  // null instead, so the referred users just lose their attribution.
+  referredBy User?  @relation("ReferralTree", fields: [referredById], references: [id], onDelete: SetNull)
   referrals  User[] @relation("ReferralTree")
+  passesGiven    Pass[] @relation("PassedBy")
+  passesReceived Pass[] @relation("PassedOn")
 
   profile              Profile?
   subscription         Subscription?
@@ -129,7 +170,7 @@ model Profile {
   avatarUrl          String?
   coverUrl           String?
   height             Int? // in cm
-  religion           String?
+  religion           Religion?
   caste              String?
   motherTongue       String?
   education          String?
@@ -144,18 +185,36 @@ model Profile {
   photos             String[] // S3 URLs
   partnerAgeMin      Int?
   partnerAgeMax      Int?
-  partnerReligion    String?
+  partnerReligion    Religion?
   partnerCaste       String?
   matrimonyVisible   Boolean  @default(true)
   verificationDocUrl String?
   createdAt          DateTime @default(now())
   updatedAt          DateTime @updatedAt
 
-  user User @relation(fields: [userId], references: [id])
+  educationLevel     EducationLevel?
+  occupationCategory OccupationCategory?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+
 
   @@index([religion, caste])
   @@index([city, state])
   @@map("profiles")
+}
+
+model Pass {
+  id        String   @id @default(uuid())
+  userId    String   // who passed
+  targetId  String   // who they passed on
+  createdAt DateTime @default(now())
+
+  user   User @relation("PassedBy", fields: [userId], references: [id], onDelete: Cascade)
+  target User @relation("PassedOn", fields: [targetId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, targetId])
+  @@map("passes")
 }
 
 model OtpToken {
@@ -168,7 +227,7 @@ model OtpToken {
   used      Boolean    @default(false)
   createdAt DateTime   @default(now())
 
-  user User @relation(fields: [userId], references: [id])
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, channel])
   @@map("otp_tokens")
@@ -181,7 +240,7 @@ model Session {
   expiresAt DateTime
   createdAt DateTime @default(now())
 
-  user User @relation(fields: [userId], references: [id])
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("sessions")
 }
@@ -194,8 +253,8 @@ model Interest {
   createdAt  DateTime       @default(now())
   updatedAt  DateTime       @updatedAt
 
-  sender   User @relation("SentInterests", fields: [senderId], references: [id])
-  receiver User @relation("ReceivedInterests", fields: [receiverId], references: [id])
+  sender   User @relation("SentInterests", fields: [senderId], references: [id], onDelete: Cascade)
+  receiver User @relation("ReceivedInterests", fields: [receiverId], references: [id], onDelete: Cascade)
 
   @@unique([senderId, receiverId])
   @@index([receiverId, status])
@@ -212,8 +271,8 @@ model Commission {
   status        CommissionStatus @default(pending)
   createdAt     DateTime         @default(now())
 
-  beneficiary User @relation("CommissionBeneficiary", fields: [beneficiaryId], references: [id])
-  sourceUser  User @relation("CommissionSource", fields: [sourceUserId], references: [id])
+  beneficiary User @relation("CommissionBeneficiary", fields: [beneficiaryId], references: [id], onDelete: Cascade)
+  sourceUser  User @relation("CommissionSource", fields: [sourceUserId], references: [id], onDelete: Cascade)
 
   @@map("commissions")
 }
@@ -230,7 +289,7 @@ model Subscription {
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
-  user User @relation(fields: [userId], references: [id])
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("subscriptions")
 }
@@ -244,7 +303,7 @@ model Post {
   createdAt DateTime   @default(now())
   updatedAt DateTime   @updatedAt
 
-  author   User      @relation(fields: [authorId], references: [id])
+  author   User      @relation(fields: [authorId], references: [id], onDelete: Cascade)
   comments Comment[]
   likes    Like[]
 
@@ -262,7 +321,7 @@ model Reel {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  author   User      @relation(fields: [authorId], references: [id])
+  author   User      @relation(fields: [authorId], references: [id], onDelete: Cascade)
   comments Comment[]
   likes    Like[]
 
@@ -276,13 +335,13 @@ model Comment {
   content   String
   createdAt DateTime @default(now())
 
-  author User @relation(fields: [authorId], references: [id])
+  author User @relation(fields: [authorId], references: [id], onDelete: Cascade)
 
   postId String?
-  post   Post?   @relation(fields: [postId], references: [id])
+  post   Post?   @relation(fields: [postId], references: [id], onDelete: Cascade)
 
   reelId String?
-  reel   Reel?   @relation(fields: [reelId], references: [id])
+  reel   Reel?   @relation(fields: [reelId], references: [id], onDelete: Cascade)
 
   @@index([postId])
   @@index([reelId])
@@ -294,13 +353,13 @@ model Like {
   userId    String
   createdAt DateTime @default(now())
 
-  user User @relation(fields: [userId], references: [id])
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   postId String?
-  post   Post?   @relation(fields: [postId], references: [id])
+  post   Post?   @relation(fields: [postId], references: [id], onDelete: Cascade)
 
   reelId String?
-  reel   Reel?   @relation(fields: [reelId], references: [id])
+  reel   Reel?   @relation(fields: [reelId], references: [id], onDelete: Cascade)
 
   @@unique([userId, postId])
   @@unique([userId, reelId])
@@ -315,8 +374,8 @@ model Message {
   read       Boolean  @default(false)
   createdAt  DateTime @default(now())
 
-  sender   User @relation("SentMessages", fields: [senderId], references: [id])
-  receiver User @relation("ReceivedMessages", fields: [receiverId], references: [id])
+  sender   User @relation("SentMessages", fields: [senderId], references: [id], onDelete: Cascade)
+  receiver User @relation("ReceivedMessages", fields: [receiverId], references: [id], onDelete: Cascade)
 
   @@index([senderId, receiverId])
   @@index([receiverId, read])
@@ -333,7 +392,7 @@ model Notification {
   relatedId String? // e.g. postId, interestId, messageId — polymorphic reference
   createdAt DateTime         @default(now())
 
-  user User @relation(fields: [userId], references: [id])
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, read])
   @@map("notifications")
@@ -345,8 +404,8 @@ model Block {
   blockedId String
   createdAt DateTime @default(now())
 
-  blocker User @relation("Blocker", fields: [blockerId], references: [id])
-  blocked User @relation("Blocked", fields: [blockedId], references: [id])
+  blocker User @relation("Blocker", fields: [blockerId], references: [id], onDelete: Cascade)
+  blocked User @relation("Blocked", fields: [blockedId], references: [id], onDelete: Cascade)
 
   @@unique([blockerId, blockedId])
   @@map("blocks")
@@ -361,8 +420,8 @@ model Report {
   resolved    Boolean      @default(false)
   createdAt   DateTime     @default(now())
 
-  reporter User @relation("Reporter", fields: [reporterId], references: [id])
-  reported User @relation("Reported", fields: [reportedId], references: [id])
+  reporter User @relation("Reporter", fields: [reporterId], references: [id], onDelete: Cascade)
+  reported User @relation("Reported", fields: [reportedId], references: [id], onDelete: Cascade)
 
   @@map("reports")
 }
@@ -376,7 +435,7 @@ model MasterAgentRequest {
   reviewedBy  String?
   note        String?
 
-  user User @relation(fields: [userId], references: [id])
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("master_agent_requests")
 }

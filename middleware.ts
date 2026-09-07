@@ -3,15 +3,18 @@ import { NextRequest, NextResponse } from 'next/server'
 import { jwtVerify } from 'jose'
 
 const JWT_SECRET = new TextEncoder().encode(process.env.JWT_SECRET!)
+
 const PUBLIC_PATHS = [
   '/api/auth/register',
-  '/api/auth/verify-otp',
-  '/api/auth/register/set-password',
+  '/api/auth/register-advisor',
   '/api/auth/login',
-  '/api/auth/forgot-password/request',
-  '/api/auth/forgot-password/reset',
+  '/api/auth/verify-otp',
+  '/api/auth/send-otp',
+  '/api/auth/resend-otp',
+  '/api/auth/forgot-password',
+  '/api/auth/set-password', // still needs to work pre-password for new users — see note below
   '/api/admin/login',
-  '/api/admin/create'
+  '/api/admin/create',
 ]
 
 export async function middleware(req: NextRequest) {
@@ -25,8 +28,14 @@ export async function middleware(req: NextRequest) {
     return NextResponse.next()
   }
 
+  // 1. Try Bearer token first (mobile apps)
   const authHeader = req.headers.get('authorization')
-  const token = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : null
+  const bearerToken = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : null
+
+  // 2. Fall back to cookie session (web app)
+  const cookieToken = req.cookies.get('sb_session')?.value
+
+  const token = bearerToken || cookieToken
 
   if (!token) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -35,7 +44,6 @@ export async function middleware(req: NextRequest) {
   try {
     const { payload } = await jwtVerify(token, JWT_SECRET)
 
-    // Pass userId downstream via a request header
     const requestHeaders = new Headers(req.headers)
     requestHeaders.set('x-user-id', payload.userId as string)
 
