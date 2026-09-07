@@ -101,12 +101,12 @@ export default async function LoginPage({
         </p>
 
         <p style={styles.footerText}>
-          <a
-            href={process.env.NEXT_PUBLIC_ADVISOR_APP_URL || "#"}
+          <Link
+            href={'/advisor/login'}
             style={styles.link}
           >
             Login as a Partner
-          </a>
+          </Link>
         </p>
       </div>
     </div>

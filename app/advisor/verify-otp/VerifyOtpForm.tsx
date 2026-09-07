@@ -1,8 +1,8 @@
-// app/(web)/verify-otp/VerifyOtpForm.tsx
+// app/advisor/verify-otp/VerifyOtpForm.tsx
 'use client'
 
 import { useState } from 'react'
-import { verifyOtpAction, resendOtpAction } from './action'
+import { verifyOtpAction, resendOtpAction } from './actions'
 
 export default function VerifyOtpForm({ email, error }: { email: string; error?: string }) {
   const [otp, setOtp] = useState('')
@@ -12,9 +12,7 @@ export default function VerifyOtpForm({ email, error }: { email: string; error?:
     <div style={styles.container}>
       <div style={styles.card}>
         <h1 style={styles.title}>Verify your email</h1>
-        <p style={styles.subtitle}>
-          We've sent a 6-digit code to <strong>{email}</strong>
-        </p>
+        <p style={styles.subtitle}>We've sent a 6-digit code to <strong>{email}</strong></p>
 
         <form
           action={async (formData) => {
@@ -56,7 +54,7 @@ const styles: Record<string, React.CSSProperties> = {
   card: { backgroundColor: '#ffffff', borderRadius: 20, padding: 32, width: 380, boxShadow: '0 8px 24px rgba(214,51,108,0.1)', textAlign: 'center' },
   title: { color: '#d6336c', fontSize: 22, fontWeight: 700, margin: 0 },
   subtitle: { color: '#a56478', fontSize: 14, marginTop: 10 },
-  form: { display: 'flex', flexDirection: 'column', gap: 12, marginTop: 20, color: '#a5486a', alignItems: 'center' },
+  form: { display: 'flex', flexDirection: 'column', gap: 12, marginTop: 20, color: '#a5486a' },
   otpInput: { padding: '14px', borderRadius: 12, border: '1px solid #f6c6d4', fontSize: 24, letterSpacing: 8, textAlign: 'center' },
   error: { color: '#e03131', fontSize: 13 },
   button: { padding: 13, borderRadius: 12, border: 'none', backgroundColor: '#d6336c', color: '#fff', fontWeight: 700, fontSize: 15, cursor: 'pointer' },

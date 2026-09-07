@@ -1,4 +1,4 @@
-// app/(web)/set-password/page.tsx
+// app/advisor/set-password/page.tsx
 import { redirect } from 'next/navigation'
 import { getWebSessionUser } from '@/lib/webSession'
 import { hashPassword } from '@/lib/auth'
@@ -8,25 +8,25 @@ async function setPasswordAction(formData: FormData) {
   'use server'
 
   const user = await getWebSessionUser()
-  if (!user) redirect('/login')
+  if (!user) redirect('/advisor/login')
 
   const password = formData.get('password') as string
   const confirmPassword = formData.get('confirmPassword') as string
 
   if (password.length < 8) {
-    redirect(`/set-password?error=${encodeURIComponent('Password must be at least 8 characters')}`)
+    redirect(`/advisor/set-password?error=${encodeURIComponent('Password must be at least 8 characters')}`)
   }
   if (password !== confirmPassword) {
-    redirect(`/set-password?error=${encodeURIComponent('Passwords do not match')}`)
+    redirect(`/advisor/set-password?error=${encodeURIComponent('Passwords do not match')}`)
   }
 
   const passwordHash = await hashPassword(password)
   await prisma.user.update({ where: { id: user!.id }, data: { passwordHash } })
 
-  redirect('/onboarding')
+  redirect('/advisor/dashboard')
 }
 
-export default async function SetPasswordPage({
+export default async function AdvisorSetPasswordPage({
   searchParams,
 }: {
   searchParams: Promise<{ error?: string }>
