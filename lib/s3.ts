@@ -28,7 +28,7 @@ export async function getPresignedUploadUrl(
 
   const uploadUrl = await getSignedUrl(s3, command, { expiresIn: 300 }) // 5 min
 
-  const publicUrl = `https://${BUCKET}.s3.${process.env.AWS_REGION}.amazonaws.com/${key}`
+  const publicUrl = `https://${BUCKET}.s3.${process.env.APP_AWS_REGION}.amazonaws.com/${key}`
 
   return { uploadUrl, publicUrl, key }
 }
