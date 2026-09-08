@@ -4,14 +4,14 @@ import { getSignedUrl } from '@aws-sdk/s3-request-presigner'
 import { randomUUID } from 'crypto'
 
 const s3 = new S3Client({
-  region: process.env.APP_AWS_REGION!,
+  region: process.env.AWS_REGION!,
   credentials: {
-    accessKeyId: process.env.APP_AWS_ACCESS_KEY_ID!,
-    secretAccessKey: process.env.APP_AWS_SECRET_ACCESS_KEY!,
+    accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
+    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!,
   },
 })
 
-const BUCKET = process.env.APP_AWS_S3_BUCKET!
+const BUCKET = process.env.AWS_S3_BUCKET!
 
 export async function getPresignedUploadUrl(
   folder: string,
@@ -28,7 +28,7 @@ export async function getPresignedUploadUrl(
 
   const uploadUrl = await getSignedUrl(s3, command, { expiresIn: 300 }) // 5 min
 
-  const publicUrl = `https://${BUCKET}.s3.${process.env.APP_AWS_REGION}.amazonaws.com/${key}`
+  const publicUrl = `https://${BUCKET}.s3.${process.env.AWS_REGION}.amazonaws.com/${key}`
 
   return { uploadUrl, publicUrl, key }
 }
