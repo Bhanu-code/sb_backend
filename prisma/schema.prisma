@@ -102,6 +102,120 @@ enum OccupationCategory {
   other
 }
 
+enum MaritalStatus {
+  never_married
+  divorced
+  widowed
+  awaiting_divorce
+}
+
+enum IdDocumentType {
+  aadhar
+  pan
+}
+
+enum IdVerificationStatus {
+  none
+  pending
+  approved
+  rejected
+}
+
+enum PhysicalStatus {
+  normal
+  physically_challenged
+}
+
+enum ProfileCreatedBy {
+  self
+  parent
+  sibling
+  relative
+  friend
+}
+
+enum EmploymentType {
+  private_sector
+  government
+  business
+  self_employed
+  not_working
+}
+
+enum EatingHabit {
+  vegetarian
+  non_vegetarian
+  eggetarian
+  vegan
+}
+
+enum SmokingHabit {
+  no
+  occasionally
+  yes
+}
+
+enum DrinkingHabit {
+  no
+  occasionally
+  yes
+}
+
+enum FamilyStatus {
+  middle_class
+  upper_middle_class
+  rich
+  affluent
+}
+
+enum FamilyValue {
+  traditional
+  moderate
+  liberal
+}
+
+enum FamilyType {
+  nuclear
+  joint
+}
+
+enum Nakshatra {
+  ashwini
+  bharani
+  krittika
+  rohini
+  mrigashira
+  ardra
+  punarvasu
+  pushya
+  ashlesha
+  magha
+  purva_phalguni
+  uttara_phalguni
+  hasta
+  chitra
+  swati
+  vishakha
+  anuradha
+  jyeshtha
+  moola
+  purva_ashadha
+  uttara_ashadha
+  shravana
+  dhanishta
+  shatabhisha
+  purva_bhadrapada
+  uttara_bhadrapada
+  revati
+}
+
+enum DoshamStatus {
+  none
+  manglik
+  other
+  dont_know
+}
+
 model User {
   id              String    @id @default(uuid())
   email           String?   @unique
@@ -128,8 +242,8 @@ model User {
   // Self-relation: NOT cascaded on delete — removing a referring advisor
   // shouldn't wipe out everyone they referred. referredById is set to
   // null instead, so the referred users just lose their attribution.
-  referredBy User?  @relation("ReferralTree", fields: [referredById], references: [id], onDelete: SetNull)
-  referrals  User[] @relation("ReferralTree")
+  referredBy     User?  @relation("ReferralTree", fields: [referredById], references: [id], onDelete: SetNull)
+  referrals      User[] @relation("ReferralTree")
   passesGiven    Pass[] @relation("PassedBy")
   passesReceived Pass[] @relation("PassedOn")
 
@@ -164,8 +278,8 @@ model User {
 }
 
 model Profile {
-  id                 String   @id @default(uuid())
-  userId             String   @unique
+  id                 String    @id @default(uuid())
+  userId             String    @unique
   bio                String?
   avatarUrl          String?
   coverUrl           String?
@@ -187,17 +301,63 @@ model Profile {
   partnerAgeMax      Int?
   partnerReligion    Religion?
   partnerCaste       String?
-  matrimonyVisible   Boolean  @default(true)
+  matrimonyVisible   Boolean   @default(true)
   verificationDocUrl String?
-  createdAt          DateTime @default(now())
-  updatedAt          DateTime @updatedAt
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  maritalStatus MaritalStatus?
+
+  // Expanded partner preferences
+  partnerEducationLevel     EducationLevel?
+  partnerOccupationCategory OccupationCategory?
+  partnerCity               String?
+  partnerState              String?
+  partnerHeightMin          Int?
+  partnerHeightMax          Int?
+  partnerMotherTongue       String?
+  partnerMaritalStatus      MaritalStatus?
+
+  // ID verification
+  idDocumentType                IdDocumentType?
+  idVerificationStatus          IdVerificationStatus @default(none)
+  idVerificationSubmittedAt     DateTime?
+  idVerificationReviewedAt      DateTime?
+  idVerificationReviewedBy      String?
+  idVerificationRejectionReason String?
 
   educationLevel     EducationLevel?
   occupationCategory OccupationCategory?
 
+  physicalStatus   PhysicalStatus?
+  profileCreatedBy ProfileCreatedBy?
+  employmentType   EmploymentType?
+  country          String?
+  citizenship      String?
+
+  eatingHabit   EatingHabit?
+  smokingHabit  SmokingHabit?
+  drinkingHabit DrinkingHabit?
+  hobbies       String[]
+
+  familyStatus FamilyStatus?
+  familyValue  FamilyValue?
+  familyType   FamilyType?
+
+  horoscopeAvailable Boolean       @default(false)
+  horoscopeUrl       String?
+  rashi              String?
+  nakshatra          Nakshatra?
+  dosham             DoshamStatus?
+
+  // Partner preference equivalents
+  partnerEatingHabit   EatingHabit?
+  partnerSmokingHabit  SmokingHabit?
+  partnerDrinkingHabit DrinkingHabit?
+  partnerCountry       String?
+  partnerDosham        DoshamStatus?
+
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-
 
   @@index([religion, caste])
   @@index([city, state])
@@ -206,8 +366,8 @@ model Profile {
 
 model Pass {
   id        String   @id @default(uuid())
-  userId    String   // who passed
-  targetId  String   // who they passed on
+  userId    String // who passed
+  targetId  String // who they passed on
   createdAt DateTime @default(now())
 
   user   User @relation("PassedBy", fields: [userId], references: [id], onDelete: Cascade)

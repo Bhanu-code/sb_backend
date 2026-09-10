@@ -1,0 +1,9 @@
+prisma:error 
+Invalid `prisma.profile.findMany()` invocation in
+/Volumes/CrucialX9/Projects/subhobibaho/sb_backend/scripts/backfill-avatars.ts:5:41
+
+  2 import { prisma } from '../lib/prisma'
+  3 
+  4 async function main() {
+→ 5   const profiles = await prisma.profile.findMany(
+
