@@ -16,7 +16,14 @@ export async function GET(
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  const conversationId = getConversationId(userId, params.otherUserId)
+  const {otherUserId} = await params
+  if (!otherUserId) {
+    return NextResponse.json({ error: 'Bad Request: Missing otherUserId' }, { status: 400 })
+  }
+
+  const conversationId = getConversationId(userId, otherUserId)
+
+  console.log('Fetching messages for conversationId:', conversationId)
 
   const result = await dynamo.send(
     new QueryCommand({

@@ -1,6 +1,7 @@
 // app/api/account/delete/route.ts
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { clearWebSession } from '@/lib/webSession'
 
 export async function DELETE(req: NextRequest) {
   try {
@@ -9,23 +10,17 @@ export async function DELETE(req: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // Delete dependent records first — no cascading deletes configured in schema,
-    // so this must be done explicitly and in the right order to avoid FK violations.
-    await prisma.$transaction([
-      prisma.like.deleteMany({ where: { userId } }),
-      prisma.comment.deleteMany({ where: { authorId: userId } }),
-      prisma.notification.deleteMany({ where: { userId } }),
-      prisma.block.deleteMany({ where: { OR: [{ blockerId: userId }, { blockedId: userId }] } }),
-      prisma.report.deleteMany({ where: { OR: [{ reporterId: userId }, { reportedId: userId }] } }),
-      prisma.message.deleteMany({ where: { OR: [{ senderId: userId }, { receiverId: userId }] } }),
-      prisma.interest.deleteMany({ where: { OR: [{ senderId: userId }, { receiverId: userId }] } }),
-      prisma.otpToken.deleteMany({ where: { userId } }),
-      prisma.session.deleteMany({ where: { userId } }),
-      prisma.reel.deleteMany({ where: { authorId: userId } }),
-      prisma.post.deleteMany({ where: { authorId: userId } }),
-      prisma.profile.deleteMany({ where: { userId } }),
-      prisma.user.delete({ where: { id: userId } }),
-    ])
+    // Thanks to onDelete: Cascade on every FK pointing at User, this single
+    // delete now cleans up profile, posts, reels, likes, comments, interests,
+    // messages, notifications, blocks, reports, sessions, otp tokens, and
+    // the master agent request. referredById on other users is set to null
+    // automatically via onDelete: SetNull, not cascaded.
+    await prisma.user.delete({ where: { id: userId } })
+
+    // Clears the httpOnly cookie for web sessions. Harmless no-op for
+    // mobile requests, which authenticate via Bearer token and never had
+    // this cookie set in the first place.
+    await clearWebSession()
 
     return NextResponse.json({ message: 'Account deleted' })
   } catch (err) {
