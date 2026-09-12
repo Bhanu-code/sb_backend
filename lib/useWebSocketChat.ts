@@ -8,33 +8,41 @@ type ChatMessage = {
   createdAt: string
   senderId: string
   receiverId: string
-  content: string
+  content: string | null
+  mediaUrl: string | null
+  mediaType: 'image' | 'file' | null
   read: boolean
 }
 
-const WS_URL = process.env.NEXT_PUBLIC_CHAT_WS_URL! // e.g. wss://xxxxx.execute-api.region.amazonaws.com/prod
+const WS_URL = process.env.NEXT_PUBLIC_CHAT_WS_URL!
 
-export function useWebSocketChat(token: string | null, onMessage: (msg: ChatMessage) => void) {
+export function useWebSocketChat(
+  token: string | null,
+  onMessage: (msg: ChatMessage) => void,
+  onTyping: (senderId: string, isTyping: boolean) => void
+) {
   const wsRef = useRef<WebSocket | null>(null)
   const [connected, setConnected] = useState(false)
   const reconnectTimeout = useRef<NodeJS.Timeout | null>(null)
   const onMessageRef = useRef(onMessage)
+  const onTypingRef = useRef(onTyping)
   onMessageRef.current = onMessage
+  onTypingRef.current = onTyping
 
   const connect = useCallback(() => {
     if (!token) return
 
     const ws = new WebSocket(`${WS_URL}?token=${encodeURIComponent(token)}`)
 
-    ws.onopen = () => {
-      setConnected(true)
-    }
+    ws.onopen = () => setConnected(true)
 
     ws.onmessage = (event) => {
       try {
         const parsed = JSON.parse(event.data)
         if (parsed.type === 'message') {
           onMessageRef.current(parsed.data)
+        } else if (parsed.type === 'typing') {
+          onTypingRef.current(parsed.data.senderId, parsed.data.isTyping)
         }
       } catch (err) {
         console.error('Failed to parse WS message:', err)
@@ -43,14 +51,10 @@ export function useWebSocketChat(token: string | null, onMessage: (msg: ChatMess
 
     ws.onclose = () => {
       setConnected(false)
-      // Reconnect after a short delay — handles the connection dropping
-      // due to network blips or the API Gateway's ~10min idle timeout
       reconnectTimeout.current = setTimeout(connect, 2000)
     }
 
-    ws.onerror = () => {
-      ws.close()
-    }
+    ws.onerror = () => ws.close()
 
     wsRef.current = ws
   }, [token])
@@ -63,13 +67,19 @@ export function useWebSocketChat(token: string | null, onMessage: (msg: ChatMess
     }
   }, [connect])
 
-  const sendMessage = useCallback((receiverId: string, content: string) => {
+  const sendMessage = useCallback((receiverId: string, content: string, mediaUrl?: string, mediaType?: 'image' | 'file') => {
     if (wsRef.current?.readyState === WebSocket.OPEN) {
       wsRef.current.send(
-        JSON.stringify({ action: 'sendMessage', data: { receiverId, content } })
+        JSON.stringify({ action: 'sendMessage', data: { receiverId, content, mediaUrl, mediaType } })
       )
     }
   }, [])
 
-  return { connected, sendMessage }
+  const sendTyping = useCallback((receiverId: string, isTyping: boolean) => {
+    if (wsRef.current?.readyState === WebSocket.OPEN) {
+      wsRef.current.send(JSON.stringify({ action: 'typing', data: { receiverId, isTyping } }))
+    }
+  }, [])
+
+  return { connected, sendMessage, sendTyping }
 }

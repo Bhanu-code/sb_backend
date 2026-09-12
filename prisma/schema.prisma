@@ -318,6 +318,18 @@ model Profile {
   partnerMotherTongue       String?
   partnerMaritalStatus      MaritalStatus?
 
+  partnerPhysicalStatus   PhysicalStatus?
+  partnerEmploymentType   EmploymentType?
+  partnerFamilyStatus     FamilyStatus?
+  partnerFamilyValue      FamilyValue?
+  partnerFamilyType       FamilyType?
+  partnerNakshatra        Nakshatra?
+
+  // Replacing free-text state/city with Indian-specific fields
+  district        String?
+  partnerDistrict String?
+
+
   // ID verification
   idDocumentType                IdDocumentType?
   idVerificationStatus          IdVerificationStatus @default(none)
