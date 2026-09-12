@@ -38,7 +38,6 @@ export async function GET(req: NextRequest) {
 
     const targetGender = me.gender === 'MALE' ? 'FEMALE' : me.gender === 'FEMALE' ? 'MALE' : undefined
 
-    // Age range → DOB range
     const ageMin = searchParams.get('ageMin')
     const ageMax = searchParams.get('ageMax')
     let dobGte: Date | undefined, dobLte: Date | undefined
@@ -59,9 +58,9 @@ export async function GET(req: NextRequest) {
 
     const stringFilters = [
       'maritalStatus', 'motherTongue', 'physicalStatus', 'religion', 'caste',
-      'employmentType', 'educationLevel', 'occupationCategory', 'country', 'citizenship',
+      'employmentType', 'educationLevel', 'occupationCategory',
       'eatingHabit', 'smokingHabit', 'drinkingHabit', 'familyStatus', 'familyValue',
-      'familyType', 'nakshatra', 'dosham', 'city', 'state',
+      'familyType', 'nakshatra', 'dosham', 'state', 'district',
     ]
     for (const field of stringFilters) {
       const val = searchParams.get(field)
@@ -103,7 +102,7 @@ export async function GET(req: NextRequest) {
         name: c.fullName ?? 'Unknown',
         age: calculateAge(c.dateOfBirth!),
         profession: c.profile?.occupation ?? null,
-        location: [c.profile?.city, c.profile?.state].filter(Boolean).join(', ') || null,
+        location: [c.profile?.district, c.profile?.state].filter(Boolean).join(', ') || null,
         religion: c.profile?.religion ?? null,
         caste: c.profile?.caste ?? null,
         height: c.profile?.height ?? null,

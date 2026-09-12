@@ -92,3 +92,10 @@ export const NAKSHATRA_LABELS: Record<string, string> = {
 export const DOSHAM_LABELS: Record<string, string> = {
   none: 'None', manglik: 'Manglik', other: 'Other', dont_know: "Don't Know",
 }
+
+export const PARTNER_PHYSICAL_STATUS_LABELS = PHYSICAL_STATUS_LABELS
+export const PARTNER_EMPLOYMENT_TYPE_LABELS = EMPLOYMENT_TYPE_LABELS
+export const PARTNER_FAMILY_STATUS_LABELS = FAMILY_STATUS_LABELS
+export const PARTNER_FAMILY_VALUE_LABELS = FAMILY_VALUE_LABELS
+export const PARTNER_FAMILY_TYPE_LABELS = FAMILY_TYPE_LABELS
+export const PARTNER_NAKSHATRA_LABELS = NAKSHATRA_LABELS
