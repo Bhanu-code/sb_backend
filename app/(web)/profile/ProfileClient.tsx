@@ -18,6 +18,7 @@ import {
   FAMILY_TYPE_LABELS,
   NAKSHATRA_LABELS,
   DOSHAM_LABELS,
+  BODY_TYPE_LABELS,
 } from '@/lib/matrimonyLabels'
 import { INDIAN_STATES, getDistrictsForState } from '@/lib/indianLocations'
 
@@ -35,16 +36,22 @@ type ProfileData = {
     avatarUrl: string | null
     coverUrl: string | null
     height: number | null
+    weightKg: number | null
+    bodyType: string | null
     religion: string | null
     caste: string | null
+    gothram: string | null
     motherTongue: string | null
     education: string | null
     educationLevel: string | null
     occupation: string | null
     occupationCategory: string | null
+    collegeInstitution: string | null
+    organizationName: string | null
     annualIncome: string | null
     state: string | null
     district: string | null
+    ancestralOrigin: string | null
     maritalStatus: string | null
     physicalStatus: string | null
     profileCreatedBy: string | null
@@ -53,9 +60,19 @@ type ProfileData = {
     smokingHabit: string | null
     drinkingHabit: string | null
     hobbies: string[] | null
+    spokenLanguages: string[] | null
     familyStatus: string | null
     familyValue: string | null
     familyType: string | null
+    fatherOccupation: string | null
+    fatherIncome: string | null
+    motherOccupation: string | null
+    motherIncome: string | null
+    brothersCount: number | null
+    brothersMarried: number | null
+    sistersCount: number | null
+    sistersMarried: number | null
+    familyBio: string | null
     horoscopeAvailable: boolean
     horoscopeUrl: string | null
     rashi: string | null
@@ -83,6 +100,7 @@ type ProfileData = {
     partnerFamilyType: string | null
     partnerDosham: string | null
     partnerNakshatra: string | null
+    partnerSpokenLanguages: string[] | null
     idDocumentType: string | null
     idVerificationStatus: string | null
     idVerificationRejectionReason: string | null
@@ -127,8 +145,6 @@ export default function ProfileClient({ initialData }: { initialData: ProfileDat
       })
       if (!uploadRes.ok) throw new Error()
 
-      // Photos save immediately on upload — no separate "Save" click needed
-      // for the avatar/cover, unlike the text-field sections below.
       await patchProfile(slot === 'avatar' ? { avatarUrl: publicUrl } : { coverUrl: publicUrl })
 
       if (slot === 'avatar') setAvatarUrl(publicUrl)
@@ -172,6 +188,14 @@ export default function ProfileClient({ initialData }: { initialData: ProfileDat
         data.profile?.familyStatus ? FAMILY_STATUS_LABELS[data.profile.familyStatus] : null,
         data.profile?.familyType ? FAMILY_TYPE_LABELS[data.profile.familyType] : null,
       ].filter(Boolean).join(' · '),
+    },
+    data.profile?.spokenLanguages && data.profile.spokenLanguages.length > 0 && {
+      icon: '🗣️',
+      label: data.profile.spokenLanguages.join(', '),
+    },
+    data.profile?.hobbies && data.profile.hobbies.length > 0 && {
+      icon: '🎨',
+      label: data.profile.hobbies.join(', '),
     },
     data.age && { icon: '🎂', label: `${data.age} years old` },
   ].filter(Boolean) as { icon: string; label: string }[]
@@ -233,15 +257,45 @@ export default function ProfileClient({ initialData }: { initialData: ProfileDat
             )}
           </div>
 
+          {(data.profile?.fatherOccupation || data.profile?.motherOccupation || data.profile?.familyBio || data.profile?.brothersCount || data.profile?.sistersCount) && (
+            <div style={styles.detailsCard}>
+              <h2 style={styles.cardTitle}>Family Details</h2>
+              {data.profile?.fatherOccupation && (
+                <div style={styles.detailRow}><span>👨</span><span style={styles.detailText}>Father: {data.profile.fatherOccupation}{data.profile.fatherIncome ? ` · ${data.profile.fatherIncome}` : ''}</span></div>
+              )}
+              {data.profile?.motherOccupation && (
+                <div style={styles.detailRow}><span>👩</span><span style={styles.detailText}>Mother: {data.profile.motherOccupation}{data.profile.motherIncome ? ` · ${data.profile.motherIncome}` : ''}</span></div>
+              )}
+              {(data.profile?.brothersCount != null || data.profile?.sistersCount != null) && (
+                <div style={styles.detailRow}>
+                  <span>👨‍👩‍👧‍👦</span>
+                  <span style={styles.detailText}>
+                    {[
+                      data.profile?.brothersCount != null ? `${data.profile.brothersCount} Brother(s)` : null,
+                      data.profile?.sistersCount != null ? `${data.profile.sistersCount} Sister(s)` : null,
+                    ].filter(Boolean).join(' · ')}
+                  </span>
+                </div>
+              )}
+              {data.profile?.familyBio && (
+                <p style={{ ...styles.detailText, marginTop: 8 }}>{data.profile.familyBio}</p>
+              )}
+            </div>
+          )}
+
           {details.length > 0 && (
             <div style={styles.detailsCard}>
-              <h2 style={styles.cardTitle}>Matrimony Details</h2>
+              <div style={styles.detailsHeader}>
+                <h2 style={styles.cardTitle}>Matrimony Details</h2>
+                <button onClick={() => setEditing(true)} style={styles.detailsEditLink}>Edit</button>
+              </div>
               {details.map((d, i) => (
                 <div key={i} style={styles.detailRow}>
                   <span>{d.icon}</span>
                   <span style={styles.detailText}>{d.label}</span>
                 </div>
               ))}
+              <p style={styles.visibilityNote}>🔒 Matrimony profile visible to verified users only</p>
             </div>
           )}
         </div>
@@ -286,19 +340,30 @@ export default function ProfileClient({ initialData }: { initialData: ProfileDat
             profileCreatedBy: p?.profileCreatedBy ?? '',
             bio: p?.bio ?? '',
             height: p?.height ? String(p.height) : '',
+            weightKg: p?.weightKg ? String(p.weightKg) : '',
+            bodyType: p?.bodyType ?? '',
           }}
           onSaved={(vals) => setData((prev) => ({
             ...prev,
             fullName: vals.fullName,
             gender: vals.gender,
             dateOfBirth: vals.dateOfBirth,
-            profile: prev.profile ? { ...prev.profile, maritalStatus: vals.maritalStatus, physicalStatus: vals.physicalStatus, profileCreatedBy: vals.profileCreatedBy, bio: vals.bio, height: vals.height ? Number(vals.height) : null } : prev.profile,
+            profile: prev.profile ? {
+              ...prev.profile,
+              maritalStatus: vals.maritalStatus,
+              physicalStatus: vals.physicalStatus,
+              profileCreatedBy: vals.profileCreatedBy,
+              bio: vals.bio,
+              height: vals.height ? Number(vals.height) : null,
+              weightKg: vals.weightKg ? Number(vals.weightKg) : null,
+              bodyType: vals.bodyType,
+            } : prev.profile,
           }))}
         />
 
         <ReligionAstroSection
           initial={{
-            religion: p?.religion ?? '', caste: p?.caste ?? '', motherTongue: p?.motherTongue ?? '',
+            religion: p?.religion ?? '', caste: p?.caste ?? '', gothram: p?.gothram ?? '', motherTongue: p?.motherTongue ?? '',
             horoscopeAvailable: p?.horoscopeAvailable ?? false, rashi: p?.rashi ?? '',
             nakshatra: p?.nakshatra ?? '', dosham: p?.dosham ?? '',
           }}
@@ -308,23 +373,50 @@ export default function ProfileClient({ initialData }: { initialData: ProfileDat
         <CareerSection
           initial={{
             educationLevel: p?.educationLevel ?? '', education: p?.education ?? '',
+            collegeInstitution: p?.collegeInstitution ?? '',
             occupationCategory: p?.occupationCategory ?? '', employmentType: p?.employmentType ?? '',
-            occupation: p?.occupation ?? '', annualIncome: p?.annualIncome ?? '',
+            occupation: p?.occupation ?? '', organizationName: p?.organizationName ?? '',
+            annualIncome: p?.annualIncome ?? '',
           }}
           onSaved={(vals) => setData((prev) => ({ ...prev, profile: prev.profile ? { ...prev.profile, ...vals } : prev.profile }))}
         />
 
         <LocationSection
-          initial={{ state: p?.state ?? '', district: p?.district ?? '' }}
-          onSaved={(vals) => setData((prev) => ({ ...prev, profile: prev.profile ? { ...prev.profile, ...vals } : prev.profile }))}
+          initial={{
+            state: p?.state ?? '', district: p?.district ?? '',
+            ancestralOriginState: '', ancestralOrigin: p?.ancestralOrigin ?? '',
+          }}
+          onSaved={(vals) => setData((prev) => ({ ...prev, profile: prev.profile ? { ...prev.profile, state: vals.state, district: vals.district, ancestralOrigin: vals.ancestralOrigin } : prev.profile }))}
         />
 
         <LifestyleSection
           initial={{
             eatingHabit: p?.eatingHabit ?? '', smokingHabit: p?.smokingHabit ?? '', drinkingHabit: p?.drinkingHabit ?? '',
-            hobbies: p?.hobbies?.join(', ') ?? '', familyStatus: p?.familyStatus ?? '', familyValue: p?.familyValue ?? '', familyType: p?.familyType ?? '',
+            hobbies: p?.hobbies?.join(', ') ?? '', spokenLanguages: p?.spokenLanguages?.join(', ') ?? '',
+            familyStatus: p?.familyStatus ?? '', familyValue: p?.familyValue ?? '', familyType: p?.familyType ?? '',
           }}
-          onSaved={(vals) => setData((prev) => ({ ...prev, profile: prev.profile ? { ...prev.profile, ...vals, hobbies: vals.hobbies.split(',').map((h: string) => h.trim()).filter(Boolean) } : prev.profile }))}
+          onSaved={(vals) => setData((prev) => ({
+            ...prev,
+            profile: prev.profile ? {
+              ...prev.profile,
+              ...vals,
+              hobbies: vals.hobbies.split(',').map((h: string) => h.trim()).filter(Boolean),
+              spokenLanguages: vals.spokenLanguages.split(',').map((l: string) => l.trim()).filter(Boolean),
+            } : prev.profile,
+          }))}
+        />
+
+        <FamilyDetailsSection
+          initial={{
+            fatherOccupation: p?.fatherOccupation ?? '', fatherIncome: p?.fatherIncome ?? '',
+            motherOccupation: p?.motherOccupation ?? '', motherIncome: p?.motherIncome ?? '',
+            brothersCount: p?.brothersCount != null ? String(p.brothersCount) : '',
+            brothersMarried: p?.brothersMarried != null ? String(p.brothersMarried) : '',
+            sistersCount: p?.sistersCount != null ? String(p.sistersCount) : '',
+            sistersMarried: p?.sistersMarried != null ? String(p.sistersMarried) : '',
+            familyBio: p?.familyBio ?? '',
+          }}
+          onSaved={(vals) => setData((prev) => ({ ...prev, profile: prev.profile ? { ...prev.profile, ...vals } : prev.profile }))}
         />
 
         <PartnerPreferencesSection
@@ -342,8 +434,16 @@ export default function ProfileClient({ initialData }: { initialData: ProfileDat
             partnerPhysicalStatus: p?.partnerPhysicalStatus ?? '', partnerFamilyStatus: p?.partnerFamilyStatus ?? '',
             partnerFamilyValue: p?.partnerFamilyValue ?? '', partnerFamilyType: p?.partnerFamilyType ?? '',
             partnerDosham: p?.partnerDosham ?? '', partnerNakshatra: p?.partnerNakshatra ?? '',
+            partnerSpokenLanguages: p?.partnerSpokenLanguages?.join(', ') ?? '',
           }}
-          onSaved={(vals) => setData((prev) => ({ ...prev, profile: prev.profile ? { ...prev.profile, ...vals } : prev.profile }))}
+          onSaved={(vals) => setData((prev) => ({
+            ...prev,
+            profile: prev.profile ? {
+              ...prev.profile,
+              ...vals,
+              partnerSpokenLanguages: vals.partnerSpokenLanguages.split(',').map((l: string) => l.trim()).filter(Boolean),
+            } : prev.profile,
+          }))}
         />
 
         {!data.idVerified && (
@@ -445,6 +545,7 @@ function BasicInfoSection({ initial, onSaved }: { initial: any; onSaved: (v: any
   const buildPayload = () => ({
     ...v,
     height: v.height ? Number(v.height) : undefined,
+    weightKg: v.weightKg ? Number(v.weightKg) : undefined,
   })
 
   return (
@@ -465,7 +566,11 @@ function BasicInfoSection({ initial, onSaved }: { initial: any; onSaved: (v: any
       <Select label="Physical Status" value={v.physicalStatus} onChange={(val) => set('physicalStatus', val)} options={PHYSICAL_STATUS_LABELS} />
       <Select label="Profile Created By" value={v.profileCreatedBy} onChange={(val) => set('profileCreatedBy', val)} options={PROFILE_CREATED_BY_LABELS} />
       <Field label="Bio" value={v.bio} onChange={(val) => set('bio', val)} multiline />
-      <Field label="Height (cm)" value={v.height} onChange={(val) => set('height', val)} type="number" />
+      <div style={{ display: 'flex', gap: 10 }}>
+        <Field label="Height (cm)" value={v.height} onChange={(val) => set('height', val)} type="number" />
+        <Field label="Weight (kg)" value={v.weightKg} onChange={(val) => set('weightKg', val)} type="number" />
+      </div>
+      <Select label="Body Type" value={v.bodyType} onChange={(val) => set('bodyType', val)} options={BODY_TYPE_LABELS} />
     </SectionShell>
   )
 }
@@ -479,6 +584,7 @@ function ReligionAstroSection({ initial, onSaved }: { initial: any; onSaved: (v:
     <SectionShell title="Religion & Astro Details" onSave={() => save(v)} saving={saving} saved={saved} error={error}>
       <Select label="Religion" value={v.religion} onChange={(val) => set('religion', val)} options={RELIGION_LABELS} />
       <Field label="Caste / Community" value={v.caste} onChange={(val) => set('caste', val)} />
+      <Field label="Gothram" value={v.gothram} onChange={(val) => set('gothram', val)} />
       <Field label="Mother Tongue" value={v.motherTongue} onChange={(val) => set('motherTongue', val)} />
       <label style={styles.checkboxRow}>
         <input type="checkbox" checked={v.horoscopeAvailable} onChange={(e) => set('horoscopeAvailable', e.target.checked)} />
@@ -500,9 +606,11 @@ function CareerSection({ initial, onSaved }: { initial: any; onSaved: (v: any) =
     <SectionShell title="Education & Career" onSave={() => save(v)} saving={saving} saved={saved} error={error}>
       <Select label="Education Level" value={v.educationLevel} onChange={(val) => set('educationLevel', val)} options={EDUCATION_LEVEL_LABELS} />
       <Field label="Degree / Field (detail)" value={v.education} onChange={(val) => set('education', val)} />
+      <Field label="College / Institution" value={v.collegeInstitution} onChange={(val) => set('collegeInstitution', val)} />
       <Select label="Occupation Category" value={v.occupationCategory} onChange={(val) => set('occupationCategory', val)} options={OCCUPATION_CATEGORY_LABELS} />
       <Select label="Employment Type" value={v.employmentType} onChange={(val) => set('employmentType', val)} options={EMPLOYMENT_TYPE_LABELS} />
       <Field label="Job Title (detail)" value={v.occupation} onChange={(val) => set('occupation', val)} />
+      <Field label="Organization Name" value={v.organizationName} onChange={(val) => set('organizationName', val)} />
       <Field label="Annual Income" value={v.annualIncome} onChange={(val) => set('annualIncome', val)} />
     </SectionShell>
   )
@@ -512,26 +620,41 @@ function LocationSection({ initial, onSaved }: { initial: any; onSaved: (v: any)
   const [v, setV] = useState(initial)
   const { saving, saved, error, save } = useSectionSave(onSaved)
   const districts = getDistrictsForState(v.state)
+  const ancestralDistricts = getDistrictsForState(v.ancestralOriginState)
 
   return (
-    <SectionShell title="Location" onSave={() => save(v)} saving={saving} saved={saved} error={error}>
+    <SectionShell
+      title="Location"
+      onSave={() => save({ state: v.state, district: v.district, ancestralOrigin: v.ancestralOrigin }, v)}
+      saving={saving} saved={saved} error={error}
+    >
       <div style={{ marginBottom: 14 }}>
         <label style={styles.label}>State</label>
-        <select value={v.state} onChange={(e) => setV({ state: e.target.value, district: '' })} style={styles.input}>
+        <select value={v.state} onChange={(e) => setV((p: any) => ({ ...p, state: e.target.value, district: '' }))} style={styles.input}>
           <option value="">Select state</option>
           {INDIAN_STATES.map((s) => <option key={s} value={s}>{s}</option>)}
         </select>
       </div>
       <div style={{ marginBottom: 14 }}>
         <label style={styles.label}>District</label>
-        <select
-          value={v.district}
-          onChange={(e) => setV((p: any) => ({ ...p, district: e.target.value }))}
-          style={styles.input}
-          disabled={!v.state}
-        >
+        <select value={v.district} onChange={(e) => setV((p: any) => ({ ...p, district: e.target.value }))} style={styles.input} disabled={!v.state}>
           <option value="">{v.state ? 'Select district' : 'Select a state first'}</option>
           {districts.map((d) => <option key={d} value={d}>{d}</option>)}
+        </select>
+      </div>
+
+      <div style={{ marginBottom: 14 }}>
+        <label style={styles.label}>Ancestral Origin (State)</label>
+        <select value={v.ancestralOriginState} onChange={(e) => setV((p: any) => ({ ...p, ancestralOriginState: e.target.value, ancestralOrigin: '' }))} style={styles.input}>
+          <option value="">Select state</option>
+          {INDIAN_STATES.map((s) => <option key={s} value={s}>{s}</option>)}
+        </select>
+      </div>
+      <div style={{ marginBottom: 14 }}>
+        <label style={styles.label}>Ancestral Origin (District)</label>
+        <select value={v.ancestralOrigin} onChange={(e) => setV((p: any) => ({ ...p, ancestralOrigin: e.target.value }))} style={styles.input} disabled={!v.ancestralOriginState}>
+          <option value="">{v.ancestralOriginState ? 'Select district' : 'Select a state first'}</option>
+          {ancestralDistricts.map((d) => <option key={d} value={d}>{d}</option>)}
         </select>
       </div>
     </SectionShell>
@@ -546,16 +669,53 @@ function LifestyleSection({ initial, onSaved }: { initial: any; onSaved: (v: any
   return (
     <SectionShell
       title="Lifestyle & Family"
-      onSave={() => save({ ...v, hobbies: v.hobbies.split(',').map((h: string) => h.trim()).filter(Boolean) }, v)}
+      onSave={() => save({
+        ...v,
+        hobbies: v.hobbies.split(',').map((h: string) => h.trim()).filter(Boolean),
+        spokenLanguages: v.spokenLanguages.split(',').map((l: string) => l.trim()).filter(Boolean),
+      }, v)}
       saving={saving} saved={saved} error={error}
     >
       <Select label="Eating Habits" value={v.eatingHabit} onChange={(val) => set('eatingHabit', val)} options={EATING_HABIT_LABELS} />
       <Select label="Smoking Habits" value={v.smokingHabit} onChange={(val) => set('smokingHabit', val)} options={SMOKING_HABIT_LABELS} />
       <Select label="Drinking Habits" value={v.drinkingHabit} onChange={(val) => set('drinkingHabit', val)} options={DRINKING_HABIT_LABELS} />
       <Field label="Hobbies (comma-separated)" value={v.hobbies} onChange={(val) => set('hobbies', val)} />
+      <Field label="Spoken Languages (comma-separated)" value={v.spokenLanguages} onChange={(val) => set('spokenLanguages', val)} />
       <Select label="Family Status" value={v.familyStatus} onChange={(val) => set('familyStatus', val)} options={FAMILY_STATUS_LABELS} />
       <Select label="Family Value" value={v.familyValue} onChange={(val) => set('familyValue', val)} options={FAMILY_VALUE_LABELS} />
       <Select label="Family Type" value={v.familyType} onChange={(val) => set('familyType', val)} options={FAMILY_TYPE_LABELS} />
+    </SectionShell>
+  )
+}
+
+function FamilyDetailsSection({ initial, onSaved }: { initial: any; onSaved: (v: any) => void }) {
+  const [v, setV] = useState(initial)
+  const { saving, saved, error, save } = useSectionSave(onSaved)
+  const set = (k: string, val: any) => setV((p: any) => ({ ...p, [k]: val }))
+
+  const buildPayload = () => ({
+    ...v,
+    brothersCount: v.brothersCount ? Number(v.brothersCount) : undefined,
+    brothersMarried: v.brothersMarried ? Number(v.brothersMarried) : undefined,
+    sistersCount: v.sistersCount ? Number(v.sistersCount) : undefined,
+    sistersMarried: v.sistersMarried ? Number(v.sistersMarried) : undefined,
+  })
+
+  return (
+    <SectionShell title="Family Details" onSave={() => save(buildPayload(), v)} saving={saving} saved={saved} error={error}>
+      <Field label="Father's Occupation" value={v.fatherOccupation} onChange={(val) => set('fatherOccupation', val)} />
+      <Field label="Father's Annual Income" value={v.fatherIncome} onChange={(val) => set('fatherIncome', val)} />
+      <Field label="Mother's Occupation" value={v.motherOccupation} onChange={(val) => set('motherOccupation', val)} />
+      <Field label="Mother's Annual Income" value={v.motherIncome} onChange={(val) => set('motherIncome', val)} />
+      <div style={{ display: 'flex', gap: 10 }}>
+        <Field label="No. of Brothers" value={v.brothersCount} onChange={(val) => set('brothersCount', val)} type="number" />
+        <Field label="— Married" value={v.brothersMarried} onChange={(val) => set('brothersMarried', val)} type="number" />
+      </div>
+      <div style={{ display: 'flex', gap: 10 }}>
+        <Field label="No. of Sisters" value={v.sistersCount} onChange={(val) => set('sistersCount', val)} type="number" />
+        <Field label="— Married" value={v.sistersMarried} onChange={(val) => set('sistersMarried', val)} type="number" />
+      </div>
+      <Field label="About My Family" value={v.familyBio} onChange={(val) => set('familyBio', val)} multiline />
     </SectionShell>
   )
 }
@@ -572,6 +732,7 @@ function PartnerPreferencesSection({ initial, onSaved }: { initial: any; onSaved
     partnerAgeMax: v.partnerAgeMax ? Number(v.partnerAgeMax) : undefined,
     partnerHeightMin: v.partnerHeightMin ? Number(v.partnerHeightMin) : undefined,
     partnerHeightMax: v.partnerHeightMax ? Number(v.partnerHeightMax) : undefined,
+    partnerSpokenLanguages: v.partnerSpokenLanguages.split(',').map((l: string) => l.trim()).filter(Boolean),
   })
 
   return (
@@ -587,6 +748,7 @@ function PartnerPreferencesSection({ initial, onSaved }: { initial: any; onSaved
       <Select label="Preferred Religion" value={v.partnerReligion} onChange={(val) => set('partnerReligion', val)} options={RELIGION_LABELS} />
       <Field label="Preferred Caste" value={v.partnerCaste} onChange={(val) => set('partnerCaste', val)} />
       <Field label="Preferred Mother Tongue" value={v.partnerMotherTongue} onChange={(val) => set('partnerMotherTongue', val)} />
+      <Field label="Preferred Spoken Languages (comma-separated)" value={v.partnerSpokenLanguages} onChange={(val) => set('partnerSpokenLanguages', val)} />
       <Select label="Preferred Marital Status" value={v.partnerMaritalStatus} onChange={(val) => set('partnerMaritalStatus', val)} options={MARITAL_STATUS_LABELS} />
       <Select label="Preferred Physical Status" value={v.partnerPhysicalStatus} onChange={(val) => set('partnerPhysicalStatus', val)} options={PHYSICAL_STATUS_LABELS} />
       <Select label="Preferred Education Level" value={v.partnerEducationLevel} onChange={(val) => set('partnerEducationLevel', val)} options={EDUCATION_LEVEL_LABELS} />
@@ -721,9 +883,12 @@ const styles: Record<string, React.CSSProperties> = {
   idStatusText: { fontSize: 12, color: '#8a5464', margin: '8px 0' },
   idVerifyButton: { padding: '8px 16px', borderRadius: 10, border: 'none', backgroundColor: '#d6336c', color: '#fff', fontWeight: 700, fontSize: 12, cursor: 'pointer' },
   detailsCard: { backgroundColor: '#ffffff', borderRadius: 16, padding: 20, margin: '16px 24px 0' },
+  detailsHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
   cardTitle: { fontSize: 14, fontWeight: 700, color: '#5c2a3a', margin: '0 0 12px' },
+  detailsEditLink: { fontSize: 12, fontWeight: 700, color: '#d6336c', background: 'none', border: 'none', cursor: 'pointer' },
   detailRow: { display: 'flex', alignItems: 'center', gap: 10, padding: '6px 0' },
   detailText: { fontSize: 13, color: '#5c2a3a' },
+  visibilityNote: { fontSize: 11, color: '#a5486a', marginTop: 12, paddingTop: 12, borderTop: '1px solid #fce8ee' },
   editHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '20px 24px 0' },
   editTitle: { fontSize: 20, fontWeight: 700, color: '#5c2a3a', margin: 0 },
   doneButton: { padding: '8px 18px', borderRadius: 10, border: 'none', backgroundColor: '#d6336c', color: '#fff', fontWeight: 700, fontSize: 13, cursor: 'pointer' },

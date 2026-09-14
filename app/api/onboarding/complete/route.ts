@@ -9,6 +9,12 @@ const LEVEL_AMOUNTS: Record<number, number> = {
   4: Number(process.env.LEVEL_4_COMMISSION ?? 50),
 }
 
+// Walks up the referral chain from the newly-onboarded user, creating
+// a Commission row per level. Level 1-3 pay out to whoever is there
+// (always an advisor or master_agent, since only those roles' codes
+// are accepted at registration). Level 4 ONLY pays if that specific
+// upline person is a master_agent — if they're still an advisor, the
+// chain stops there and no level-4 payout happens.
 async function payReferralCommissions(newUserId: string, directReferrerId: string) {
   const commissionsToCreate: {
     beneficiaryId: string
@@ -86,7 +92,7 @@ export async function POST(req: NextRequest) {
       occupation,
       occupationCategory,
       annualIncome,
-      city,
+      district,
       state,
       bio,
       photos,
@@ -108,9 +114,8 @@ export async function POST(req: NextRequest) {
     const alreadyComplete = user.profileComplete
 
     // The first uploaded photo becomes the profile avatar; the second (if
-    // present) becomes the cover photo. This is a convention, not something
-    // the user explicitly chooses during onboarding — they can change either
-    // later via Edit Profile.
+    // present) becomes the cover photo. Users can change either later via
+    // Edit Profile.
     const avatarUrl = photos[0] ?? undefined
     const coverUrl = photos[1] ?? undefined
 
@@ -136,7 +141,7 @@ export async function POST(req: NextRequest) {
         occupation,
         occupationCategory,
         annualIncome,
-        city,
+        district,
         state,
         bio,
         photos,
@@ -157,7 +162,7 @@ export async function POST(req: NextRequest) {
         occupation,
         occupationCategory,
         annualIncome,
-        city,
+        district,
         state,
         bio,
         photos,
