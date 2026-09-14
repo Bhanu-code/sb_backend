@@ -53,24 +53,39 @@ export async function GET(req: NextRequest) {
 
     const heightMin = searchParams.get('heightMin')
     const heightMax = searchParams.get('heightMax')
+    const weightMin = searchParams.get('weightMin')
+    const weightMax = searchParams.get('weightMax')
 
     const profileWhere: Record<string, any> = { matrimonyVisible: true }
 
     const stringFilters = [
-      'maritalStatus', 'motherTongue', 'physicalStatus', 'religion', 'caste',
+      'maritalStatus', 'motherTongue', 'physicalStatus', 'religion', 'caste', 'gothram',
       'employmentType', 'educationLevel', 'occupationCategory',
       'eatingHabit', 'smokingHabit', 'drinkingHabit', 'familyStatus', 'familyValue',
-      'familyType', 'nakshatra', 'dosham', 'state', 'district',
+      'familyType', 'nakshatra', 'dosham', 'state', 'district', 'ancestralOrigin', 'bodyType',
     ]
     for (const field of stringFilters) {
       const val = searchParams.get(field)
       if (val && val !== 'any') profileWhere[field] = val
     }
 
+    // spokenLanguages is a String[] — match candidates who speak ANY of the
+    // requested languages, not all of them (broader, more useful match)
+    const spokenLanguages = searchParams.get('spokenLanguages')
+    if (spokenLanguages) {
+      profileWhere.spokenLanguages = { hasSome: spokenLanguages.split(',').map((s) => s.trim()).filter(Boolean) }
+    }
+
     if (heightMin || heightMax) {
       profileWhere.height = {
         ...(heightMin && { gte: Number(heightMin) }),
         ...(heightMax && { lte: Number(heightMax) }),
+      }
+    }
+    if (weightMin || weightMax) {
+      profileWhere.weightKg = {
+        ...(weightMin && { gte: Number(weightMin) }),
+        ...(weightMax && { lte: Number(weightMax) }),
       }
     }
 
@@ -108,6 +123,7 @@ export async function GET(req: NextRequest) {
         height: c.profile?.height ?? null,
         education: c.profile?.education ?? null,
         image: c.profile?.avatarUrl ?? null,
+        profileId: `SB${c.profileNumber.toString().padStart(6, '0')}`,
       }))
 
     return NextResponse.json({ profiles: results, count: results.length })

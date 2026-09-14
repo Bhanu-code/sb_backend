@@ -7,6 +7,7 @@ import {
   EDUCATION_LEVEL_LABELS,
   OCCUPATION_CATEGORY_LABELS,
 } from '@/lib/matrimonyLabels'
+import { INDIAN_STATES, getDistrictsForState } from '@/lib/indianLocations'
 
 type FormData = {
   gender: 'MALE' | 'FEMALE' | 'OTHER' | ''
@@ -20,7 +21,7 @@ type FormData = {
   occupation: string
   occupationCategory: string
   annualIncome: string
-  city: string
+  district: string
   state: string
   bio: string
   photos: string[]
@@ -44,7 +45,7 @@ const initialData: FormData = {
   occupation: '',
   occupationCategory: '',
   annualIncome: '',
-  city: '',
+  district: '',
   state: '',
   bio: '',
   photos: [],
@@ -78,8 +79,8 @@ export default function OnboardingWizard() {
       setError('Please select your education level and occupation category')
       return
     }
-    if (step === 4 && (!data.city.trim() || !data.state.trim())) {
-      setError('Please fill in city and state')
+    if (step === 4 && (!data.district.trim() || !data.state.trim())) {
+      setError('Please select your district and state')
       return
     }
     if (step === 5 && data.bio.trim().length < 20) {
@@ -162,7 +163,7 @@ export default function OnboardingWizard() {
           occupation: data.occupation,
           occupationCategory: data.occupationCategory || undefined,
           annualIncome: data.annualIncome,
-          city: data.city,
+          district: data.district,
           state: data.state,
           bio: data.bio,
           photos: data.photos,
@@ -325,23 +326,30 @@ export default function OnboardingWizard() {
 
         {step === 4 && (
           <Step title="Where are you located?">
-            <Label>City</Label>
-            <input
-              type="text"
-              placeholder="e.g. Kolkata"
-              value={data.city}
-              onChange={(e) => update({ city: e.target.value })}
-              style={styles.input}
-            />
-
             <Label>State</Label>
-            <input
-              type="text"
-              placeholder="e.g. West Bengal"
+            <select
               value={data.state}
-              onChange={(e) => update({ state: e.target.value })}
+              onChange={(e) => update({ state: e.target.value, district: '' })}
               style={styles.input}
-            />
+            >
+              <option value="">Select state</option>
+              {INDIAN_STATES.map((s) => (
+                <option key={s} value={s}>{s}</option>
+              ))}
+            </select>
+
+            <Label>District</Label>
+            <select
+              value={data.district}
+              onChange={(e) => update({ district: e.target.value })}
+              style={styles.input}
+              disabled={!data.state}
+            >
+              <option value="">{data.state ? 'Select district' : 'Select a state first'}</option>
+              {getDistrictsForState(data.state).map((d) => (
+                <option key={d} value={d}>{d}</option>
+              ))}
+            </select>
           </Step>
         )}
 

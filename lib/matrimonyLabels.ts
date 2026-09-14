@@ -38,6 +38,18 @@ export const OCCUPATION_CATEGORY_LABELS: Record<string, string> = {
   other: 'Other',
 }
 
+export const BODY_TYPE_LABELS: Record<string, string> = {
+  slim: 'Slim',
+  athletic: 'Athletic',
+  average: 'Average',
+  heavy: 'Heavy',
+}
+
+export const VISIBILITY_LABELS: Record<string, string> = {
+  visible_to_all: 'Visible to all',
+  visible_to_contacted_or_paid: 'Visible to members you have contacted/accepted and to all paid members',
+  visible_to_selected: 'Visible to members of your choice',
+}
 // add to lib/matrimonyLabels.ts
 
 export const MARITAL_STATUS_LABELS: Record<string, string> = {

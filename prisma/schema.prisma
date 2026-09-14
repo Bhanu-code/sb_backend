@@ -155,6 +155,12 @@ enum SmokingHabit {
   yes
 }
 
+enum VisibilityLevel {
+  visible_to_all
+  visible_to_contacted_or_paid
+  visible_to_selected
+}
+
 enum DrinkingHabit {
   no
   occasionally
@@ -209,6 +215,13 @@ enum Nakshatra {
   revati
 }
 
+enum BodyType {
+  slim
+  athletic
+  average
+  heavy
+}
+
 enum DoshamStatus {
   none
   manglik
@@ -235,6 +248,12 @@ model User {
   idVerified      Boolean   @default(false)
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
+
+  mobilePrivacyEnabled Boolean @default(true) // true = hide phone number from non-contacts
+
+  profileNumber Int @unique @default(autoincrement())
+
+  savedSearches SavedSearch[]
 
   notificationsEnabled   Boolean @default(true)
   locationSharingEnabled Boolean @default(false)
@@ -306,7 +325,31 @@ model Profile {
   createdAt          DateTime  @default(now())
   updatedAt          DateTime  @updatedAt
 
+  bodyType           BodyType?
+  weightKg           Int?
+  gothram            String?
+  ancestralOrigin    String?
+  spokenLanguages    String[]
+  collegeInstitution String?
+  organizationName   String?
+
+  fatherOccupation String?
+  fatherIncome     String?
+  motherOccupation String?
+  motherIncome     String?
+  brothersCount    Int?
+  brothersMarried  Int?
+  sistersCount     Int?
+  sistersMarried   Int?
+  familyBio        String?
+
+  partnerSpokenLanguages String[]
+
   maritalStatus MaritalStatus?
+
+  profileVisibility   VisibilityLevel @default(visible_to_all)
+  photoVisibility     VisibilityLevel @default(visible_to_all)
+  horoscopeVisibility VisibilityLevel @default(visible_to_all)
 
   // Expanded partner preferences
   partnerEducationLevel     EducationLevel?
@@ -318,17 +361,16 @@ model Profile {
   partnerMotherTongue       String?
   partnerMaritalStatus      MaritalStatus?
 
-  partnerPhysicalStatus   PhysicalStatus?
-  partnerEmploymentType   EmploymentType?
-  partnerFamilyStatus     FamilyStatus?
-  partnerFamilyValue      FamilyValue?
-  partnerFamilyType       FamilyType?
-  partnerNakshatra        Nakshatra?
+  partnerPhysicalStatus PhysicalStatus?
+  partnerEmploymentType EmploymentType?
+  partnerFamilyStatus   FamilyStatus?
+  partnerFamilyValue    FamilyValue?
+  partnerFamilyType     FamilyType?
+  partnerNakshatra      Nakshatra?
 
   // Replacing free-text state/city with Indian-specific fields
   district        String?
   partnerDistrict String?
-
 
   // ID verification
   idDocumentType                IdDocumentType?
@@ -415,6 +457,18 @@ model Session {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("sessions")
+}
+
+model SavedSearch {
+  id        String   @id @default(uuid())
+  userId    String
+  name      String
+  filters   Json
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("saved_searches")
 }
 
 model Interest {

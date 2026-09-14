@@ -1,6 +1,7 @@
 // app/api/account/delete/route.ts
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { comparePassword } from '@/lib/auth'
 import { clearWebSession } from '@/lib/webSession'
 
 export async function DELETE(req: NextRequest) {
@@ -10,16 +11,24 @@ export async function DELETE(req: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // Thanks to onDelete: Cascade on every FK pointing at User, this single
-    // delete now cleans up profile, posts, reels, likes, comments, interests,
-    // messages, notifications, blocks, reports, sessions, otp tokens, and
-    // the master agent request. referredById on other users is set to null
-    // automatically via onDelete: SetNull, not cascaded.
+    const { password } = await req.json()
+    if (!password) {
+      return NextResponse.json({ error: 'Password is required' }, { status: 400 })
+    }
+
+    const user = await prisma.user.findUnique({ where: { id: userId } })
+    if (!user || !user.passwordHash) {
+      return NextResponse.json({ error: 'Unable to verify account' }, { status: 400 })
+    }
+
+    const validPassword = await comparePassword(password, user.passwordHash)
+    if (!validPassword) {
+      return NextResponse.json({ error: 'Incorrect password' }, { status: 401 })
+    }
+
+    // Cascading deletes on every FK pointing at User clean up everything else.
     await prisma.user.delete({ where: { id: userId } })
 
-    // Clears the httpOnly cookie for web sessions. Harmless no-op for
-    // mobile requests, which authenticate via Bearer token and never had
-    // this cookie set in the first place.
     await clearWebSession()
 
     return NextResponse.json({ message: 'Account deleted' })
