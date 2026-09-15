@@ -15,8 +15,8 @@ export default function ContactPage() {
       <section style={styles.contentSection}>
         <div style={styles.infoCol}>
           <ContactInfoRow icon={<Mail size={20} color="#d6336c" />} label="Email" value="support@subhobibaho.com" />
-          <ContactInfoRow icon={<Phone size={20} color="#d6336c" />} label="Phone" value="+91 98765 43210" />
-          <ContactInfoRow icon={<MapPin size={20} color="#d6336c" />} label="Address" value="Kolkata, West Bengal, India" />
+          <ContactInfoRow icon={<Phone size={20} color="#d6336c" />} label="Phone" value="+91 9474490874" />
+          <ContactInfoRow icon={<MapPin size={20} color="#d6336c" />} label="Address" value="721306 Kharagpur, Paschim Medinipur, West Bengal, India" />
         </div>
 
         <ContactForm />

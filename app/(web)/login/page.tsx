@@ -29,6 +29,10 @@ async function loginAction(formData: FormData) {
     redirect(`/login?error=${encodeURIComponent("Invalid email or password")}`);
   }
 
+  if(user?.role !== "customer") {
+    redirect(`/login?error=${encodeURIComponent("Only customers can log in")}`);
+  }
+
   await createWebSession(user!.id);
 
   if (!user!.profileComplete) {
