@@ -172,74 +172,7 @@ export default async function LandingPage() {
         </a>
       </section>
 
-      {/* Footer */}
-      <footer style={styles.footer}>
-        <div style={styles.footerTop}>
-          <div style={styles.footerBrandCol}>
-            <span style={styles.footerBrand}>Subhobibaho</span>
-            <p style={styles.footerTagline}>
-              Helping families find meaningful matches since day one.
-            </p>
-            <div style={styles.socialRow}>
-              {/* <a href="#" aria-label="Facebook" style={styles.socialIcon}><Facebook size={18} /></a>
-              <a href="#" aria-label="Instagram" style={styles.socialIcon}><Instagram size={18} /></a>
-              <a href="#" aria-label="Twitter" style={styles.socialIcon}><Twitter size={18} /></a>
-              <a href="#" aria-label="YouTube" style={styles.socialIcon}><Youtube size={18} /></a> */}
-            </div>
-          </div>
-
-          <div style={styles.footerCol}>
-            <p style={styles.footerColTitle}>Company</p>
-            <a href="/about" style={styles.footerLink}>
-              About Us
-            </a>
-            <a href="/contact" style={styles.footerLink}>
-              Contact
-            </a>
-            <a href="/careers" style={styles.footerLink}>
-              Careers
-            </a>
-          </div>
-
-          <div style={styles.footerCol}>
-            <p style={styles.footerColTitle}>Account</p>
-            <a href="/login" style={styles.footerLink}>
-              Log In
-            </a>
-            <a href="/register" style={styles.footerLink}>
-              Sign Up
-            </a>
-            <a href="/forgot-password" style={styles.footerLink}>
-              Forgot Password
-            </a>
-          </div>
-
-          <div style={styles.footerCol}>
-            <p style={styles.footerColTitle}>Legal</p>
-            <a href="/privacy" style={styles.footerLink}>
-              Privacy Policy
-            </a>
-            <a href="/terms-of-service" style={styles.footerLink}>
-              Terms of Service
-            </a>
-            <a href="/user-policy" style={styles.footerLink}>
-              User Policy
-            </a>
-            <a href="/refund-policy" style={styles.footerLink}>
-              Refund & Cancellation Policy
-            </a>
-            <a href="/disclaimer" style={styles.footerLink}>
-              Disclaimer
-            </a>
-          </div>
-        </div>
-
-        <div style={styles.footerBottom}>
-          <p style={styles.footerCopyright}>
-            © {new Date().getFullYear()} Subhobibaho. All rights reserved.
-          </p>
-        </div>
-      </footer>
+      
     </div>
   );
 }

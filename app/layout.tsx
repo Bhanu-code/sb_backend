@@ -45,7 +45,7 @@ export default function RootLayout({
             </Link>
           </div>
           <div style={styles.footerBrandCol}>
-            <span style={styles.footerBrand}>Subhobibaho Pvt. Ltd.</span>
+            <span style={styles.footerBrand}>SUBHOBIBAHO.COM PVT. LTD.</span>
             <p style={styles.footerTagline}>
               Helping families find meaningful matches since day one.
             </p>

@@ -18,6 +18,8 @@ async function loginAction(formData: FormData) {
 
   const user = await prisma.user.findUnique({ where: { email } })
 
+  
+
   if (!user || !user.passwordHash) {
     redirect(`/advisor/login?error=${encodeURIComponent('Invalid email or password')}`)
   }
